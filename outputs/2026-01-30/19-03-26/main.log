@@ -1,0 +1,16 @@
+[2026-01-30 19:03:26,327][NeuroManifold][INFO] - Initializing NeuroManifold Engine (Hydra Powered)...
+[2026-01-30 19:03:26,329][NeuroManifold][INFO] - >>> Starting Pipeline Execution [Step Size: 0.002]
+[2026-01-30 19:03:26,330][NeuroManifold][INFO] - Phase 1: Generating 5-D Exciter Data (Synthetic Physics)...
+[2026-01-30 19:03:26,333][NeuroManifold][INFO] -    Boundary Points: 150
+[2026-01-30 19:03:26,333][NeuroManifold][INFO] -    Collocation Points: 2000
+[2026-01-30 19:03:26,333][NeuroManifold][INFO] - Phase 2: MAP Optimization (Finding the Typical Set)...
+[2026-01-30 19:03:28,105][NeuroManifold][INFO] -    Epoch 0: Loss = 0.208428
+[2026-01-30 19:03:31,276][NeuroManifold][INFO] -    Epoch 100: Loss = 0.135599
+[2026-01-30 19:03:34,619][NeuroManifold][INFO] -    Epoch 200: Loss = 0.077918
+[2026-01-30 19:03:37,638][NeuroManifold][INFO] -    Epoch 300: Loss = 0.073687
+[2026-01-30 19:03:40,616][NeuroManifold][INFO] -    Epoch 400: Loss = 0.070956
+[2026-01-30 19:03:43,691][NeuroManifold][INFO] -    Pre-training converged. Final Loss: 0.065238
+[2026-01-30 19:03:43,692][NeuroManifold][INFO] - Phase 3: Hamiltonian Monte Carlo (The Rolls Royce Sampler)...
+[2026-01-30 19:03:43,693][NeuroManifold][INFO] -    Starting Chain: 100 Samples + 50 Burn-in
+[2026-01-30 19:07:41,499][NeuroManifold][INFO] -    Sampling Complete. Posterior Shape: torch.Size([100, 921])
+[2026-01-30 19:07:42,533][NeuroManifold][INFO] - >>> Pipeline Complete. Shutting down.
