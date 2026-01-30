@@ -16,18 +16,18 @@ model:
 hmc:
   # Sampling Density
   num_samples: 200
-  burn_in: 100
   
   # Integrator Precision ("Small Steps, Long Paths")
-  step_size: 5e-4  # Small enough to keep Acceptance ~100% (High Numerical Precision)
+  step_size: 1.5e-3  # Increased for efficiency (Target ~80% Accept)
   num_steps: 100   # Long enough to decorrelate samples (High Statistical Precision)
   
   # Geometry Adaptation
   adapt_mass_matrix: true
   beta: 100.0
+  burn_in: 200
 
 train:
-  pretrain_epochs: 500
+  pretrain_epochs: 300
   lr: 1e-3
 
 hydra:

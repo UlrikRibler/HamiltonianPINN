@@ -1,9 +1,0 @@
-[2026-01-30 19:19:09,441][NeuroManifold][INFO] - Initializing NeuroManifold Engine (Hydra Powered)...
-[2026-01-30 19:19:09,446][NeuroManifold][INFO] - >>> Starting Pipeline Execution [Step Size: 0.0005]
-[2026-01-30 19:19:09,447][NeuroManifold][INFO] - Phase 1: Generating 5-D Exciter Data (Synthetic Physics)...
-[2026-01-30 19:19:09,455][NeuroManifold][INFO] -    Boundary Points: 150
-[2026-01-30 19:19:09,455][NeuroManifold][INFO] -    Collocation Points: 2000
-[2026-01-30 19:19:09,456][NeuroManifold][INFO] - Phase 2: MAP Optimization (Finding the Typical Set)...
-[2026-01-30 19:19:10,782][NeuroManifold][INFO] -    Epoch 0: Loss = 0.208428
-[2026-01-30 19:19:12,140][NeuroManifold][INFO] -    Epoch 100: Loss = 0.135599
-[2026-01-30 19:19:13,651][NeuroManifold][INFO] -    Epoch 200: Loss = 0.077918

@@ -14,7 +14,7 @@ Standard PINNs trained with `Adam` or `L-BFGS` produce a single solution. This i
 ### 2. Solving the "Curse of Dimensionality"
 Classical Bayesian methods (like Random Walk Metropolis) fail when the parameter space $D > 100$. A PINN has $D > 10,000$.
 *   **The Solution:** We treat the loss surface as a physical terrain. Instead of blindly stumbling around (Random Walk), our sampler uses the **gradient of the physics** ($\nabla \mathcal{L}$) to "kick" a virtual particle across the landscape.
-*   **The Result:** We can propose samples that are far apart in parameter space but still have high acceptance rates (~100%), allowing us to explore high-dimensional manifolds that are impossible for traditional samplers.
+*   **The Result:** We can propose samples that are far apart in parameter space but still have high acceptance rates (~80%), allowing us to explore high-dimensional manifolds that are impossible for traditional samplers.
 
 ### 3. The "Small Steps, Long Paths" Strategy
 We employ a rigorous symplectic integration scheme:
@@ -32,13 +32,11 @@ We utilize **Symplectic Geometry** to traverse the probability landscape:
     *   $U(\theta)$: Potential Energy (The Physics Loss).
     *   $K(p)$: Kinetic Energy (The Momentum of the Sampler).
 
-2.  **Symplectic Integration (Leapfrog):**
-A numerical solver that strictly preserves **Phase Space Volume** (Liouville's Theorem).
-    $$ \det \frac{\partial (\theta_{t+\tau}, p_{t+\tau})}{\partial (\theta_t, p_t)} = 1 $$
-    This guarantees that our Markov Chain converges to the *exact* true posterior, not an approximation.
+2.  **Dual Averaging Adaptation:**
+Implementation of Nesterov's Dual Averaging to automatically tune the step size $\epsilon$ during burn-in, targeting an optimal acceptance rate of 80%.
 
 3.  **Exact Physics Derivatives:**
-Powered by `torch.func` (JAX-like functional API), we compute exact Jacobians and Hessians of the PDE without the memory overhead of standard autograd, enabling efficient curvature-aware sampling.
+Powered by `torch.func` (JAX-like functional API), we compute exact Jacobians and Hessians of the PDE without the memory overhead of standard autograd.
 
 ---
 
@@ -62,27 +60,35 @@ The project is configured via **Hydra** in `conf/config.yaml`. The **"Gold Stand
 *   **Precision Settings:**
     *   `num_samples: 200` (High-density posterior)
     *   `num_steps: 100` (Long trajectories for decorrelation)
-    *   `step_size: 5e-4` (Symplectic stability)
+    *   `step_size: 1.5e-3` (Initial step size, tuned automatically)
     *   `adapt_mass_matrix: true` (Riemannian Metric adaptation during burn-in)
+    *   `burn_in: 200` (Warm-up period for adaptation)
 
 ## 🏃 Usage & Execution
 
-### 1. Robust Background Execution (Recommended)
-High-precision sampling is computationally intensive. Run the pipeline as a detached process to ensure it persists beyond terminal timeouts.
+### Option 1: Robust Background Execution (Recommended)
+High-precision sampling is computationally intensive. Run the pipeline as a background process to keep your terminal free and ensure it persists.
 
-**PowerShell (Windows):**
+**Step 1: Start the Process**
+Copy and paste this command into your PowerShell terminal:
 ```powershell
 Start-Process python -ArgumentList "main.py" -RedirectStandardOutput "training.log" -RedirectStandardError "training_error.log" -NoNewWindow
 ```
 
-**Monitoring Logs:**
-You can watch the logs in real-time to track the HMC acceptance rates and Energy values:
+**Step 2: Monitor Progress**
+To watch the training logs in real-time (press `Ctrl+C` to stop watching, the process will continue):
 ```powershell
 Get-Content training.log -Wait
 ```
 
-### 2. Interactive Run
-For debugging or shorter runs:
+**Step 3: Check Errors**
+If nothing seems to be happening, check the error log:
+```powershell
+Get-Content training_error.log
+```
+
+### Option 2: Interactive Run
+For debugging or shorter runs where you want to see output directly in the terminal:
 ```bash
 python main.py
 ```
@@ -93,7 +99,7 @@ All results are automatically saved to `results/` and the date-structured `outpu
 | Artifact | Description |
 | :--- | :--- |
 | **`uncertainty_profile.png`** | **The "God Tier" Plot.** Visualizes the mean prediction $\mathbb{E}[u]$ and the 95% Credible Interval (uncertainty bands). Shows exactly where the physics is uncertain. |
-| **`trace_plot.png`** | **Chain Diagnostics.** Visualizes the mixing of the Hamiltonian particle. Look for "fuzzy caterpillars" (good mixing) vs. slow drifts. |
+| **`trace_plot.png`** | **Chain Diagnostics.** Visualizes the mixing of the Hamiltonian particle across multiple parameters (start, middle, end) to verify global convergence. |
 | **`training.log`** | Detailed telemetry including loss convergence, HMC energy errors, and **Effective Sample Size (ESS)** diagnostics. |
 
 ## 📂 Project Structure

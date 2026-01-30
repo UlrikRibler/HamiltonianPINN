@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch.func import grad, vmap
 
 class Hamiltonian:
@@ -113,6 +114,40 @@ class LeapfrogIntegrator:
         
         return params, momentum
 
+class DualAveragingStepSize:
+    """
+    Nesterov's Dual Averaging algorithm for adaptive step size tuning.
+    Targets a specific acceptance rate (usually 0.8) during burn-in.
+    """
+    def __init__(self, initial_step_size, target_accept=0.8, gamma=0.05, t0=10.0, kappa=0.75):
+        self.mu = np.log(10 * initial_step_size)
+        self.target_accept = target_accept
+        self.gamma = gamma
+        self.t0 = t0
+        self.kappa = kappa
+        self.error_sum = 0
+        self.log_step_size = np.log(initial_step_size)
+        self.log_step_size_bar = self.log_step_size
+        self.m = 1
+
+    def update(self, accept_prob):
+        # H_m = (1 - 1/(m+t0)) H_{m-1} + 1/(m+t0) (delta - alpha)
+        eta = 1.0 / (self.m + self.t0)
+        self.error_sum = (1 - eta) * self.error_sum + eta * (self.target_accept - accept_prob)
+        
+        # log epsilon_m = mu - sqrt(m)/gamma * H_m
+        self.log_step_size = self.mu - (np.sqrt(self.m) / self.gamma) * self.error_sum
+        
+        # log epsilon_bar_m = m^{-kappa} log epsilon_m + (1 - m^{-kappa}) log epsilon_bar_{m-1}
+        m_power = self.m ** -self.kappa
+        self.log_step_size_bar = m_power * self.log_step_size + (1 - m_power) * self.log_step_size_bar
+        
+        self.m += 1
+        return np.exp(self.log_step_size)
+    
+    def get_final_epsilon(self):
+        return np.exp(self.log_step_size_bar)
+
 class HMCSampler:
     """
     The High-Fidelity "Rolls Royce" of MCMC Samplers.
@@ -128,10 +163,13 @@ class HMCSampler:
     Features:
     - **Riemannian Adaptation:** Can adapt the Mass Matrix $M$ (Metric Tensor) during burn-in to 
       normalize the curvature of the loss landscape (preconditioning).
+    - **Dual Averaging Step Size:** Implements Nesterov's Dual Averaging to automatically tune 
+      the step size $\epsilon$ during burn-in, targeting an optimal acceptance rate (typically 0.8).
     """
     def __init__(self, potential_fn, step_size=1e-3, num_steps=10, mass_matrix_diag=None):
         self.H = Hamiltonian(potential_fn, mass_matrix_diag)
         self.integrator = LeapfrogIntegrator(self.H, step_size, num_steps)
+        self.initial_step_size = step_size
         
     def sample(self, current_params, num_samples=100, burn_in=0, adapt_mass_matrix=False):
         samples = []
@@ -146,6 +184,9 @@ class HMCSampler:
         # Adaptation buffer
         if adapt_mass_matrix:
             burn_in_samples = []
+            
+        # Step Size Adaptation
+        step_size_adapter = DualAveragingStepSize(self.initial_step_size)
         
         for i in range(num_samples + burn_in):
             # 1. Resample Momentum
@@ -163,33 +204,39 @@ class HMCSampler:
             # Acceptance Probability = min(1, exp(H_old - H_new))
             # (Note: Hamiltonian is Energy, so Prob ~ exp(-H))
             log_accept_prob = current_H - proposed_H
+            accept_prob = torch.exp(torch.min(torch.tensor(0.0), log_accept_prob)).item()
             
-            if torch.log(torch.rand(1)) < log_accept_prob:
+            if torch.rand(1) < accept_prob:
                 params = new_params
                 accepted += 1
             
             # Adaptation Step (during burn-in)
-            if adapt_mass_matrix and i < burn_in:
-                burn_in_samples.append(params.detach())
-                # Update Mass Matrix every 10 steps if we have enough samples
-                if i > 10 and i % 10 == 0:
-                    stacked_burn = torch.stack(burn_in_samples)
-                    # Variance of parameters + small jitter for stability
-                    var = torch.var(stacked_burn, dim=0) + 1e-5
-                    # Inverse variance is the diagonal mass matrix (Metric)
-                    # High variance -> Low curvature -> Small mass (move fast)
-                    # Wait, Mass Matrix M corresponds to precision. 
-                    # If var is high (flat), we want large steps? 
-                    # Stan uses M = Inverse Covariance. 
-                    # Actually simpler: M^-1 = Covariance.
-                    # So M = 1/Var.
-                    self.H.mass_matrix_diag = 1.0 / var
+            if i < burn_in:
+                # Step Size Adaptation
+                new_step_size = step_size_adapter.update(accept_prob)
+                self.integrator.step_size = new_step_size
+                
+                if adapt_mass_matrix:
+                    burn_in_samples.append(params.detach())
+                    # Update Mass Matrix every 20 steps if we have enough samples
+                    # Increased window for stability
+                    if i > 20 and i % 20 == 0:
+                        stacked_burn = torch.stack(burn_in_samples)
+                        # Variance of parameters + small jitter for stability
+                        var = torch.var(stacked_burn, dim=0) + 1e-5
+                        # Inverse variance is the diagonal mass matrix (Metric)
+                        self.H.mass_matrix_diag = 1.0 / var
+            elif i == burn_in:
+                # End of burn-in: Lock in the averaged step size
+                final_step_size = step_size_adapter.get_final_epsilon()
+                self.integrator.step_size = final_step_size
+                print(f"   >>> Burn-in Complete. Final Step Size: {final_step_size:.2e}")
             
             if i >= burn_in:
                 samples.append(params.detach().cpu())
                 
             if i % 10 == 0:
-                print(f"Sample {i}/{num_samples+burn_in} | Accept Rate: {accepted/(i+1):.2f} | Energy: {current_H.item():.4f}")
+                print(f"Sample {i}/{num_samples+burn_in} | Accept Prob: {accept_prob:.2f} | Step: {self.integrator.step_size:.2e} | Energy: {current_H.item():.4f}")
                 
         return torch.stack(samples)
 

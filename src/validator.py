@@ -76,16 +76,24 @@ class Validator:
         Computes Markov Chain Monte Carlo (MCMC) diagnostics to verify convergence.
         
         Metrics:
-          - **Trace Plot:** Visual check for stationarity and mixing.
+          - **Trace Plot:** Visual check for stationarity and mixing across multiple parameters 
+            (start, middle, and end of the parameter vector).
           - **Effective Sample Size (ESS):** The number of effectively independent samples.
             $ESS = N \frac{1-\rho}{1+\rho}$, where $\rho$ is the lag-1 autocorrelation.
         """
-        # 1. Trace Plot
-        plt.figure(figsize=(10, 4))
-        plt.plot(samples[:, 0].numpy())
-        plt.title("Trace Plot (Parameter 0)")
-        plt.xlabel("Sample")
-        plt.ylabel("Value")
+        # 1. Trace Plot (Multi-dimensional) (Multi-dimensional)
+        N_params = samples.shape[1]
+        indices = [0, N_params // 2, N_params - 1]
+        
+        fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+        for i, idx in enumerate(indices):
+            axes[i].plot(samples[:, idx].numpy(), alpha=0.7, color='black', linewidth=0.8)
+            axes[i].set_ylabel(f"Param {idx}")
+            axes[i].grid(True, alpha=0.3)
+            
+        axes[0].set_title("Trace Plots (Chain Mixing Diagnostics)")
+        axes[-1].set_xlabel("Sample Index (Post-Burn-in)")
+        plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, "trace_plot.png"))
         
         # 2. Effective Sample Size (Simplified)
