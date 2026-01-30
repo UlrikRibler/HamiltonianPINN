@@ -51,7 +51,7 @@ Powered by `torch.func` (JAX-like functional API), we compute exact Jacobians an
 
 ### Installation
 ```bash
-git clone https://github.com/your-username/HamiltonianPINN.git
+git clone https://github.com/UlrikRibler/HamiltonianPINN.git
 cd HamiltonianPINN
 pip install -r requirements.txt
 ```
