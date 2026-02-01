@@ -5,17 +5,18 @@ class Burgers1D:
     """
     Defines the physical laws governing the 1D Viscous Burgers' Equation.
     
-    The PDE is given by:
+    The PDE acts as the "Likelihood Function" in our Bayesian setting. It is given by:
     $$ \frac{\partial u}{\partial t} + u \frac{\partial u}{\partial x} - \nu \frac{\partial^2 u}{\partial x^2} = 0 $$
     
     Where:
-      - $u(x,t)$: Velocity field.
-      - $\nu$ (nu): Kinematic viscosity (diffusion coefficient).
+      - $u(x,t)$: Velocity field (The State Variable).
+      - $\nu$ (nu): Kinematic viscosity (diffusion coefficient), controlling shock thickness.
       
-    **Implementation Details:**
+    **Computational Graph Implementation:**
     Uses `torch.func` (Jacobian/Hessian vector products) to compute **exact** derivatives of the 
     neural network $\hat{u}$ with respect to inputs $(x, t)$. This avoids the memory overhead of 
-    standard `torch.autograd.grad` (create_graph=True) and allows for efficient vectorization (`vmap`).
+    standard `torch.autograd.grad` (create_graph=True) and allows for efficient vectorization (`vmap`)
+    over the collocation batch.
     """
     def __init__(self, nu=0.01/torch.pi):
         self.nu = nu
@@ -23,7 +24,9 @@ class Burgers1D:
     def physics_residual(self, model, params, x_t):
         """
         Computes the PDE residual $\mathcal{F}(x, t) = u_t + u u_x - \nu u_{xx}$.
-        Ideally, $\mathcal{F} \to 0$ for a valid physical solution.
+        
+        In the Bayesian interpretation, minimizing the norm of this residual maximizes the 
+        posterior probability $p(\theta | \text{Physics})$.
         
         Args:
             model (nn.Module): The stateless PINN model instance.
@@ -31,7 +34,7 @@ class Burgers1D:
             x_t (torch.Tensor): Spatiotemporal coordinates $(x, t)$.
             
         Returns:
-            torch.Tensor: The PDE error residual at each point.
+            torch.Tensor: The PDE error residual at each point in the batch.
         """
         # We need first and second derivatives of u w.r.t x and t.
         # We use torch.func.grad to get derivatives w.r.t inputs.
@@ -71,8 +74,11 @@ class Burgers1D:
 
     def loss(self, model, params, data_boundary, data_collocation):
         """
-        Computes the Total Potential Energy $U(\theta)$ (Loss).
-        $U(\theta) = \mathcal{L}_{boundary} + \mathcal{L}_{physics}$
+        Computes the Total Potential Energy $U(\theta)$ (Negative Log Posterior).
+        
+        $$ U(\theta) = \lambda_b \mathcal{L}_{boundary} + \lambda_f \mathcal{L}_{physics} $$
+        
+        Valleys in this potential landscape correspond to valid physical solutions.
         """
         # 1. Boundary/Initial Conditions Loss
         x_b, y_b = data_boundary

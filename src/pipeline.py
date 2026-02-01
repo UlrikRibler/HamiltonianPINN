@@ -4,7 +4,7 @@ import logging
 from omegaconf import DictConfig
 from src.models.pinn import PINN
 from src.physics.burgers import Burgers1D
-from src.mcmc.hmc import HMCSampler
+from src.mcmc.nuts import NUTSSampler
 from src.data import DataGenerator
 from src.validator import Validator
 from src.utils import get_flat_params, unflatten_params
@@ -19,20 +19,24 @@ logger = logging.getLogger("NeuroManifold")
 
 class BayesianPipeline:
     """
-    The High-Fidelity Orchestrator.
+    The High-Fidelity Orchestrator for Physics-Informed Bayesian Inference.
     
-    Manages the lifecycle of the Bayesian Physics Inversion process. This pipeline coordinates
-    the interaction between the Differential Geometry engine (HMC), the Physics laws (Burgers), 
-    and the Neural Approximation (PINN).
+    This pipeline manages the end-to-end lifecycle of the "NeuroManifold" engine, 
+    coordinating the interaction between the Differential Geometry core (Riemannian NUTS), 
+    the Physical Laws (Burgers' Equation), and the Neural Approximation (PINN).
     
     **Lifecycle Phases:**
-      1. **Initialization:** Sets up the manifold geometry and random seeds.
-      2. **Phase 1 (Data Synthesis):** Generates the boundary and collocation constraints.
-      3. **Phase 2 (MAP Optimization):** Uses `Adam` to rapidly descend to the "Typical Set" 
-         (the region of high probability mass), providing a warm start for the sampler.
-      4. **Phase 3 (HMC Sampling):** The "Gold Standard" phase. A particle explores the posterior 
-         distribution using Hamiltonian Dynamics, collecting uncorrelated samples.
-      5. **Phase 4 (Validation):** Computes diagnostics (ESS, Trace Plots) and quantifies uncertainty.
+      1.  **Initialization:** Sets up the manifold geometry and random seeds.
+      2.  **Phase 1 (Data Synthesis):** Generates the boundary and collocation constraints 
+          that define the Inverse Problem.
+      3.  **Phase 2 (MAP Optimization):** Uses `Adam` to rapidly descend to the "Typical Set" 
+          (the region of high probability mass), providing a geometrically valid initialization 
+          for the sampler.
+      4.  **Phase 3 (Riemannian NUTS):** The core inference phase. A particle explores the 
+          posterior distribution on the curved manifold using Hamiltonian Dynamics with 
+          Low-Rank Metric Adaptation, collecting uncorrelated, high-fidelity samples.
+      5.  **Phase 4 (Validation):** Computes diagnostics (ESS, Trace Plots) and quantifies 
+          epistemic uncertainty in the physical predictions.
     """
     def __init__(self, cfg: DictConfig):
         self.cfg = cfg
@@ -103,7 +107,7 @@ class BayesianPipeline:
         logger.info(f"   Pre-training converged. Final Loss: {loss.item():.6f}")
 
     def _run_hmc(self):
-        logger.info("Phase 3: Hamiltonian Monte Carlo (The Rolls Royce Sampler)...")
+        logger.info("Phase 3: Riemannian No-U-Turn Sampler (The 160 IQ Upgrade)...")
         
         # Define Potential Energy U(theta)
         def potential_fn(flat_params):
@@ -116,10 +120,12 @@ class BayesianPipeline:
             )
             return loss_val * self.cfg.hmc.beta
 
-        sampler = HMCSampler(
+        # Using NUTS with Riemannian Manifold (Lanczos Low-Rank Approx)
+        sampler = NUTSSampler(
             potential_fn, 
             step_size=self.cfg.hmc.step_size, 
-            num_steps=self.cfg.hmc.num_steps
+            max_tree_depth=10, # Standard default, 2^10 = 1024 max steps
+            adapt_mass_matrix=self.cfg.hmc.adapt_mass_matrix
         )
         
         current_flat_params = get_flat_params(self.model)
@@ -128,8 +134,7 @@ class BayesianPipeline:
         samples = sampler.sample(
             current_flat_params, 
             num_samples=self.cfg.hmc.num_samples, 
-            burn_in=self.cfg.hmc.burn_in, 
-            adapt_mass_matrix=self.cfg.hmc.adapt_mass_matrix
+            burn_in=self.cfg.hmc.burn_in
         )
         logger.info(f"   Sampling Complete. Posterior Shape: {samples.shape}")
         return samples

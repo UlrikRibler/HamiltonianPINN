@@ -1,125 +1,136 @@
-# HamiltonianPINN 🌌
-### The "Gold Standard" for Bayesian Physics-Informed Neural Networks
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![PyTorch](https://img.shields.io/badge/PyTorch-God%20Tier-red) ![Hydra](https://img.shields.io/badge/Config-Hydra-89b8cd)
+# NeuroManifold: Riemannian Bayesian Intelligence for Physics-Informed Neural Networks
 
-**HamiltonianPINN** is a research-grade framework that solves the **"Physics Inversion Problem"** with mathematical rigor. It combines **Physics-Informed Neural Networks (PINNs)** with **Hamiltonian Monte Carlo (HMC)** to quantify epistemic uncertainty in high-dimensional solution manifolds.
+> **Scientific Discovery Engine** | **Gen 5 Upgrade** | **Riemannian NUTS**
 
----
+**NeuroManifold** is a next-generation Probabilistic Programming framework designed to solve Inverse Problems in differential equations. It transcends standard optimization by treating neural network training not as point-estimation, but as **Bayesian Inference on a curved Riemannian Manifold**.
 
-## 💡 Why This Is A Game Changer
-
-### 1. Beyond the "Point Estimate" Illusion
-Standard PINNs trained with `Adam` or `L-BFGS` produce a single solution. This is dangerous in scientific computing because it masks non-uniqueness and ill-posedness. **HamiltonianPINN** does not give you *an* answer; it gives you the **distribution of all valid answers** consistent with the observed data and physical laws.
-
-### 2. Solving the "Curse of Dimensionality"
-Classical Bayesian methods (like Random Walk Metropolis) fail when the parameter space $D > 100$. A PINN has $D > 10,000$.
-*   **The Solution:** We treat the loss surface as a physical terrain. Instead of blindly stumbling around (Random Walk), our sampler uses the **gradient of the physics** ($\nabla \mathcal{L}$) to "kick" a virtual particle across the landscape.
-*   **The Result:** We can propose samples that are far apart in parameter space but still have high acceptance rates (~80%), allowing us to explore high-dimensional manifolds that are impossible for traditional samplers.
-
-### 3. The "Small Steps, Long Paths" Strategy
-We employ a rigorous symplectic integration scheme:
-*   **Small Steps ($dt$):** Ensures energy conservation errors are negligible (Machine Precision).
-*   **Long Paths ($L$):** We integrate for hundreds of steps per sample. This forces the particle to travel to distant modes of the posterior, ensuring that Sample $N$ and Sample $N+1$ are statistically independent (**High Effective Sample Size**).
+By combining **Physics-Informed Neural Networks (PINNs)** with **Geometric Hamiltonian Monte Carlo**, this tool allows researchers to quantify uncertainty in physical simulations and discover governing laws from sparse, noisy data.
 
 ---
 
-## 🚀 The Mathematical Engine
+## 🔬 The "160 IQ" Upgrade: Riemannian No-U-Turn Sampler
 
-We utilize **Symplectic Geometry** to traverse the probability landscape:
+Standard Bayesian Neural Networks fail because the loss landscape of deep networks is pathologically curved ("banana-shaped" posteriors). Standard HMC gets stuck, and Langevin Dynamics (SGLD) is biased.
 
-1.  **The Hamiltonian ($H$):** The total energy of the system, conserved by nature.
-    $$H(\theta, p) = U(\theta) + K(p) = -\log \mathcal{L}_{physics}(\theta) + \frac{1}{2} p^T M^{-1} p$$
-    *   $U(\theta)$: Potential Energy (The Physics Loss).
-    *   $K(p)$: Kinetic Energy (The Momentum of the Sampler).
+**Gen 5 introduces the Riemannian No-U-Turn Sampler (NUTS) with Low-Rank Curvature Approximation.**
 
-2.  **Dual Averaging Adaptation:**
-Implementation of Nesterov's Dual Averaging to automatically tune the step size $\epsilon$ during burn-in, targeting an optimal acceptance rate of 80%.
+### 1. The Geometry of Intelligence
+We define the probability space as a **Riemannian Manifold** $(\mathcal{M}, g)$, where the metric tensor $g(\theta)$ is derived from the local curvature of the Physics Loss $U(\theta)$.
 
-3.  **Exact Physics Derivatives:**
-Powered by `torch.func` (JAX-like functional API), we compute exact Jacobians and Hessians of the PDE without the memory overhead of standard autograd.
+$$ g(\theta) \approx |\nabla^2 U(\theta)| + \alpha I $$
+
+This "straightens out" the twisted geometry of the neural network parameter space, allowing the sampler to traverse complex valleys efficiently.
+
+### 2. Low-Rank Hessian Approximation (Lanczos)
+Computing the full Hessian $H \in \mathbb{R}^{N \times N}$ for a neural network is computationally impossible ($O(N^3)$). We use **Lanczos Iteration** to compute a rank-$k$ approximation using only Hessian-Vector Products (HVP):
+
+$$ H \cdot v = \nabla_\theta (\nabla_\theta U(\theta) \cdot v) $$
+
+The Inverse Metric Tensor is then efficiently computed using the Woodbury Matrix Identity structure:
+
+$$ M^{-1} = V (|\Lambda|^{-1} - \alpha^{-1} I) V^T + \alpha^{-1} I $$
+
+where $V, \Lambda$ are the top-$k$ eigenpairs of the Hessian.
+
+### 3. No-U-Turn Sampler (NUTS)
+Traditional HMC requires manual tuning of the trajectory length $L$. If $L$ is too short, mixing is slow (Random Walk). If $L$ is too long, the trajectory loops back (U-Turn).
+
+**NUTS** builds a recursive binary tree of potential paths in phase space. It expands the trajectory forward and backward in time until the particle starts to double back, satisfying the Detailed Balance condition automatically.
 
 ---
 
-## 🛠️ Getting Started
+## 🛠️ Architecture
+
+```mermaid
+graph TD
+    A[Physics Constraints] -->|Loss Function| B(Potential Energy U)
+    C[Lanczos Algorithm] -->|Eigen-Decomposition| D(Riemannian Metric M)
+    B --> E{NUTS Sampler}
+    D --> E
+    E -->|Hamiltonian Dynamics| F[Posterior Samples]
+    F --> G[Uncertainty Quantification]
+```
+
+### Core Components
+*   `src/models/pinn.py`: The Neural Network approximating the solution $u(x,t)$.
+*   `src/physics/burgers.py`: The PDE constraints (Burgers' Equation).
+*   `src/mcmc/nuts.py`: **[NEW]** The Riemannian No-U-Turn Sampler implementation.
+*   `src/pipeline.py`: The orchestrator that manages Data -> MAP -> MCMC.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 *   Python 3.10+
-*   PyTorch 2.0+ (with `torch.func` support)
-*   Hydra (`pip install hydra-core`)
+*   PyTorch (CUDA recommended)
+*   Hydra (Configuration)
 
 ### Installation
 ```bash
-git clone https://github.com/UlrikRibler/HamiltonianPINN.git
-cd HamiltonianPINN
 pip install -r requirements.txt
 ```
 
-### ⚙️ Configuration
-The project is configured via **Hydra** in `conf/config.yaml`. The **"Gold Standard"** preset is designed for maximum statistical fidelity:
+### Running the Engine
+Execute the main pipeline. The system will automatically generate synthetic data, pre-train the network (MAP), and then launch the NUTS sampler.
 
-*   **Precision Settings:**
-    *   `num_samples: 200` (High-density posterior)
-    *   `num_steps: 100` (Long trajectories for decorrelation)
-    *   `step_size: 1.5e-3` (Initial step size, tuned automatically)
-    *   `adapt_mass_matrix: true` (Riemannian Metric adaptation during burn-in)
-    *   `burn_in: 200` (Warm-up period for adaptation)
-
-## 🏃 Usage & Execution
-
-### Option 1: Robust Background Execution (Recommended)
-High-precision sampling is computationally intensive. Run the pipeline as a background process to keep your terminal free and ensure it persists.
-
-**Step 1: Start the Process**
-Copy and paste this command into your PowerShell terminal:
-```powershell
-Start-Process python -ArgumentList "main.py" -RedirectStandardOutput "training.log" -RedirectStandardError "training_error.log" -NoNewWindow
-```
-
-**Step 2: Monitor Progress**
-To watch the training logs in real-time (press `Ctrl+C` to stop watching, the process will continue):
-```powershell
-Get-Content training.log -Wait
-```
-
-**Step 3: Check Errors**
-If nothing seems to be happening, check the error log:
-```powershell
-Get-Content training_error.log
-```
-
-### Option 2: Interactive Run
-For debugging or shorter runs where you want to see output directly in the terminal:
 ```bash
 python main.py
 ```
 
-## 📊 Posterior Analytics & Artifacts
-All results are automatically saved to `results/` and the date-structured `outputs/` directory.
+### Configuration (`conf/config.yaml`)
+You can tune the geometric hyperparameters in the config file:
 
-| Artifact | Description |
-| :--- | :--- |
-| **`uncertainty_profile.png`** | **The "God Tier" Plot.** Visualizes the mean prediction $\mathbb{E}[u]$ and the 95% Credible Interval (uncertainty bands). Shows exactly where the physics is uncertain. |
-| **`trace_plot.png`** | **Chain Diagnostics.** Visualizes the mixing of the Hamiltonian particle across multiple parameters (start, middle, end) to verify global convergence. |
-| **`training.log`** | Detailed telemetry including loss convergence, HMC energy errors, and **Effective Sample Size (ESS)** diagnostics. |
-
-## 📂 Project Structure
-
-```
-C:\Users\ulrik\Documents\VSCODE\Markov-chain-optimalization\
-├───main.py                 # The Entry Point / Hydra Runtime
-├───conf\                   # Hydra Configuration (Metric Tensors, Step Sizes)
-├───src\
-│   ├───pipeline.py         # The Orchestrator (MAP -> Burn-in -> Sampling)
-│   ├───validator.py        # The Posterior Analytics Engine (ESS, Uncertainty)
-│   ├───data.py             # The Physics Data Foundry (Manifold Synthesis)
-│   ├───physics\            # The Laws of Nature (Burgers PDE via torch.func)
-│   ├───mcmc\               # The Engine (Hamiltonian, Leapfrog, HMCSampler)
-│   ├───models\             # The Brain (PINN Neural Ansatz)
-│   └───utils.py            # Manifold Mapping Utilities (Coordinate Charts)
-└───results\                # High-Resolution Artifacts
+```yaml
+hmc:
+  step_size: 1.5e-3      # Initial step size (tuned by Dual Averaging)
+  num_samples: 200       # Number of posterior samples
+  burn_in: 200           # Adaptation phase length
+  adapt_mass_matrix: true # Enable Riemannian Metric adaptation
 ```
 
-## 📄 License
-MIT License.
+---
 
-Built with **PyTorch 2.0**, **Symplectic Geometry**, and **Hamiltonian Dynamics**. 🌌
+## 📊 Results & Visualization
+
+The pipeline outputs high-fidelity artifacts to the `outputs/` directory:
+
+1.  **`uncertainty_profile.png`**: A visualization of the solution $u(x,t)$ with 95% Confidence Intervals, showing where the physics is uncertain (e.g., around the shockwave).
+2.  **`trace_plot.png`**: Diagnostics showing the mixing of the Markov Chain.
+
+### Example Output (Log)
+```text
+[Riemannian] Top Eigenspectrum: [ 4200.16  6181.61  987233.2 ]
+[NUTS] Burn-in Complete. Final Step Size: 8.27e-01
+Sample 200/400 | Depth: 5 | Step: 8.27e-01
+```
+
+---
+
+## 📚 Mathematical Formulation
+
+The target distribution is the **Bayesian Posterior** given the PDE residuals:
+
+$$ p(\theta | \mathcal{D}) \propto e^{-\beta \mathcal{L}_{PDE}(\theta)} \cdot p(\theta) $$
+
+We simulate the Hamiltonian Dynamics of a particle with position $\theta$ and momentum $p$:
+
+$$ \frac{d\theta}{dt} = M^{-1} p, \quad \frac{dp}{dt} = -\nabla_\theta U(\theta) $$
+
+The Riemannian Metric $M(\theta)$ acts as a "mass matrix" that varies with position, making the particle "heavy" in sharp directions (high curvature) and "light" in flat directions, ensuring optimal energy exchange.
+
+---
+
+## 📜 License & Citation
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details. This ensures that you are free to use, modify, and distribute this software, provided that the original copyright notice is preserved.
+
+**How to Cite:**
+If you use this code in your research or applications, please credit the original author:
+
+> **Ulrik (2026). NeuroManifold: Riemannian Bayesian Intelligence for Physics-Informed Neural Networks.**
+
+---
+
+**Author:** NeuroManifold Agent
+**Date:** February 2026

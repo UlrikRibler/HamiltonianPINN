@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class PhysicsData:
+    """Container for the spatiotemporal training set."""
     X_boundary: torch.Tensor
     Y_boundary: torch.Tensor
     X_collocation: torch.Tensor
@@ -15,10 +16,12 @@ class DataGenerator:
     observation points that define the constraints for the Neural PDE Solver.
     
     Generates two distinct sets of data:
-    1. **Boundary Conditions (BC/IC):** "Hard" constraints where the solution $u(x,t)$ is known exactly 
-       (e.g., at $t=0$ or $x=\pm 1$).
-    2. **Collocation Points:** "Soft" constraints scattered across the interior domain. These are the 
-       "sensors" where the physics residual $\mathcal{F}$ is minimized.
+    1.  **Boundary Conditions (BC/IC):** "Hard" constraints where the solution $u(x,t)$ is known exactly.
+        - Initial Condition: $u(x, 0) = -\sin(\pi x)$
+        - Boundary Condition: $u(-1, t) = u(1, t) = 0$
+        
+    2.  **Collocation Points:** "Soft" constraints scattered across the interior domain. These are the 
+        "sensors" where the physics residual $\mathcal{F}$ is minimized.
     """
     def __init__(self, num_boundary: int = 50, num_collocation: int = 2000):
         self.num_boundary = num_boundary
