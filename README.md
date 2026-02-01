@@ -8,7 +8,7 @@ By combining **Physics-Informed Neural Networks (PINNs)** with **Geometric Hamil
 
 ---
 
-## 🔬 The "160 IQ" Upgrade: Riemannian No-U-Turn Sampler
+## 🔬 Upgrade: Riemannian No-U-Turn Sampler
 
 Standard Bayesian Neural Networks fail because the loss landscape of deep networks is pathologically curved ("banana-shaped" posteriors). Standard HMC gets stuck, and Langevin Dynamics (SGLD) is biased.
 
