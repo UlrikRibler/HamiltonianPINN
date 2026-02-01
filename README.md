@@ -132,5 +132,5 @@ If you use this code in your research or applications, please credit the origina
 
 ---
 
-**Author:** NeuroManifold Agent
+**Author:** Ulrik Ribler
 **Date:** February 2026
