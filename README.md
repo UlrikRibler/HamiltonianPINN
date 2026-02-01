@@ -128,7 +128,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 **How to Cite:**
 If you use this code in your research or applications, please credit the original author:
 
-> **Ulrik (2026). NeuroManifold: Riemannian Bayesian Intelligence for Physics-Informed Neural Networks.**
+> **Ulrik Ribler (2026). NeuroManifold: Riemannian Bayesian Intelligence for Physics-Informed Neural Networks.**
 
 ---
 
